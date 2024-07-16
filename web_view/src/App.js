@@ -121,6 +121,7 @@ const Equalizer = () => {
     for (let x = 0; x < width; x++) {
       const freq = positionToFrequency(x / width);
       let totalGain = 0;
+      const sampleRate = 48000; // TODO: get from JUCE
 
       bands.forEach(band => {
         const bandFreq = band.frequency;
@@ -135,16 +136,58 @@ const Equalizer = () => {
             gain = bandGain / (1 + Math.pow((freq - bandFreq) / (bandFreq / bandQ), 2));
             break;
           case 'LowShelf':
+            // TODO: replace more complex function using bandQ
             gain = bandGain / (1 + Math.pow(freqRatio, 2));
             break;
           case 'HighShelf':
+            // TODO: replace more complex function using bandQ
             gain = bandGain / (1 + Math.pow(1 / freqRatio, 2));
             break;
           case 'Lowpass':
-            gain = -bandGain * Math.pow(freqRatio, 2) / (1 + Math.pow(freqRatio, 2));
+            {
+              const w0Low = 2 * Math.PI * freq / sampleRate;
+              const cosw0Low = Math.cos(w0Low);
+              const alphaLow = Math.sin(w0Low) / (2 * bandQ);
+
+              const b1Low = (1 - cosw0Low) / 2;
+              const b0Low = b1Low;
+              const b2Low = b1Low;
+              const a0Low = 1 + alphaLow;
+              const a1Low = -2 * cosw0Low;
+              const a2Low = 1 - alphaLow;
+
+              const magnitudeLow = Math.abs((b0Low + b1Low + b2Low) / (a0Low + a1Low + a2Low));
+
+              // Apply LowPass filter effect
+              if (freq <= bandFreq) {
+                gain = 0;  // Pass the frequency
+              } else {
+                gain = -20 * Math.log10(Math.sqrt(1 + Math.pow((freqRatio) - 1, 4)));
+              }
+            }
             break;
           case 'Highpass':
-            gain = -bandGain / (1 + Math.pow(1 / freqRatio, 2));
+            {
+              const w0High = 2 * Math.PI * freq / sampleRate;
+              const cosw0High = Math.cos(w0High);
+              const alphaHigh = Math.sin(w0High) / (2 * bandQ);
+
+              const b1High = -(1 + cosw0High) / 2;
+              const b0High = -b1High;
+              const b2High = b1High;
+              const a0High = 1 + alphaHigh;
+              const a1High = -2 * cosw0High;
+              const a2High = 1 - alphaHigh;
+
+              const magnitudeHigh = Math.abs((b0High + b1High + b2High) / (a0High + a1High + a2High));
+
+              // Apply HighPass filter effect
+              if (freq >= bandFreq) {
+                gain = 0;  // Pass the frequency
+              } else {
+                gain = -20 * Math.log10(Math.sqrt(1 + Math.pow((bandFreq / freq) - 1, 4)));
+              }
+            }
             break;
           default:
             console.warn(`Unknown filter type: ${band.type}`);
