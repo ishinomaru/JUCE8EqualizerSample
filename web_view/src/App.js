@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+import LogScaleKnob from './LogScaleKnob';
 
 const filterTypes = ['LowShelf', 'Lowpass', 'Bell', 'Highpass', 'HighShelf'];
 
@@ -228,13 +229,11 @@ const Equalizer = () => {
         {bands.map(band => (
           <div key={band.id} className="band-panel">
             <div className="label">Frequency</div>
-            <input
-              type="range"
-              className="knob"
-              min="20"
-              max="20000"
-              value={band.frequency}
-              onChange={(e) => handleBandChange(band.id, 'frequency', e.target.value)}
+            <LogScaleKnob
+              min={20}
+              max={20000}
+              defaultValue={band.frequency}
+              onChange={(newLinearValue) => handleBandChange(band.id, 'frequency', newLinearValue)}
             />
             <div className="value">{Math.round(band.frequency)} Hz</div>
 
